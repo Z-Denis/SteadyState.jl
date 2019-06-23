@@ -1,5 +1,7 @@
 module SteadyState
 
-greet() = print("Hello World!")
+include("bicgstab.jl")
+export steadystate_bicg, steadystate_bicg!
+#include("indexing.jl")
 
 end # module
