@@ -1,40 +1,21 @@
-
 """
-    steadystate_bicg(H, J, l=2; [log=false], kwargs...) -> rho[, log]
+    steadystate_iterative!(rho0, H, J, solver, args...; [log=false], kwargs...) -> rho[, log]
 
 Compute the steady state density matrix of a Hamiltonian and a set of jump
-operators by solving `L rho = 0` via the stabilized biconjugate gradient method.
-
-# Arguments
-* `H`: dense Hamiltonian.
-* `J`: array of dense jump operators.
-* `l`: number of GMRES steps per iteration.
-* `kwargs...`: further arguments are passed on to the iterative solver.
-
-See also: [`steadystate_bicg!`](@ref)
-"""
-function steadystate_bicg(H::O, J::Vector{O}, l::Int=2; log::Bool=false, kwargs...) where {B<:Basis,O<:AbstractOperator{B,B}}
-    ρ0 = O<:DenseOperator ? DenseOperator(H.basis_l) : SparseOperator(H.basis_l)
-    ρ0.data[1,1] = ComplexF64(1.0)
-    return steadystate_bicg!(ρ0,H,J,l;log=log,kwargs...)
-end
-
-"""
-    steadystate_bicg!(rho0, H, J, l=2; [log=false], kwargs...) -> rho[, log]
-
-Compute the steady state density matrix of a Hamiltonian and a set of jump
-operators by solving `L rho = 0` via the stabilized biconjugate gradient method.
+operators by solving `L rho = 0` via an iterative method provided as argument.
 
 # Arguments
 * `rho0`: Initial guess.
 * `H`: dense Hamiltonian.
 * `J`: array of dense jump operators.
-* `l`: number of GMRES steps per iteration.
-* `kwargs...`: further arguments are passed on to the iterative solver.
+* `solver::Symbol`: name of a desired iterative method from scope or `IterativeSolvers.jl`.
+* `args...`: further arguments are passed on to the iterative solver.
+* `kwargs...`: further keyword arguments are passed on to the iterative solver.
 
 See also: [`steadystate_bicg`](@ref)
 """
-function steadystate_bicg!(ρ0::DenseOperator{B,B}, H::DenseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:DenseOperator{B,B}}
+function steadystate_iterative!(ρ0::DenseOperator{B,B}, H::DenseOperator{B,B}, J::Vector{O}, solver::Symbol, args...; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:DenseOperator{B,B}}
+    method! = isdefined(Main,solver) ? getfield(Main,solver) : getfield(@__MODULE__,solver)
     # Size of the Hilbert space
     M::Int = size(H.data,1)
     # Non-Hermitian Hamiltonian
@@ -74,16 +55,17 @@ function steadystate_bicg!(ρ0::DenseOperator{B,B}, H::DenseOperator{B,B}, J::Ve
     res0_norm::Float64 = norm(mvecmul!(similar(y),x0) .- y)
     tol /= res0_norm + eps(Float64)
     if !log
-        ρ0.data .= @views reshape(bicgstabl!(x0,lm,y,l;tol=tol,kwargs...)[2:end],(M,M))
+        ρ0.data .= @views reshape(method!(x0,lm,y,args...;tol=tol,kwargs...)[2:end],(M,M))
         return ρ0
     else
-        R::Vector{ComplexF64}, history = bicgstabl!(x0,lm,y,l;log=log,tol=tol,kwargs...)
+        R::Vector{ComplexF64}, history = method!(x0,lm,y,args...;log=log,tol=tol,kwargs...)
         ρ0.data .= @views reshape(R[2:end],(M,M))
         return ρ0, history
     end
 end
 
-function steadystate_bicg!(ρ0::SparseOperator{B,B}, H::SparseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:SparseOperator{B,B}}
+function steadystate_iterative!(ρ0::SparseOperator{B,B}, H::SparseOperator{B,B}, J::Vector{O}, solver::Symbol, args...; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:SparseOperator{B,B}}
+    method! = isdefined(Main,solver) ? getfield(Main,solver) : getfield(@__MODULE__,solver)
     # Size of the Hilbert space
     M::Int = size(H.data,1)
     # Non-Hermitian Hamiltonian
@@ -123,10 +105,10 @@ function steadystate_bicg!(ρ0::SparseOperator{B,B}, H::SparseOperator{B,B}, J::
     res0_norm::Float64 = norm(mvecmul!(similar(y),x0) .- y)
     tol /= res0_norm + eps(Float64)
     if !log
-        ρ0.data .= reshape(bicgstabl!(x0,lm,y,l;tol=tol,kwargs...)[2:end],(M,M))
+        ρ0.data .= reshape(method!(x0,lm,y,args...;tol=tol,kwargs...)[2:end],(M,M))
         return ρ0
     else
-        R::Vector{ComplexF64}, history = bicgstabl!(x0,lm,y,l;log=log,tol=tol,kwargs...)
+        R::Vector{ComplexF64}, history = method!(x0,lm,y,args...;log=log,tol=tol,kwargs...)
         ρ0.data .= reshape(R[2:end],(M,M))
         return ρ0, history
     end
