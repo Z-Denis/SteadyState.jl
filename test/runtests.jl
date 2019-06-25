@@ -32,7 +32,7 @@ using IterativeSolvers
     r0.data[1,1] = one(ComplexF64)
 
     # Dense
-    r3 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), :bicgstabl!, 2; tol=tol)
+    r3 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), bicgstabl!, 2; tol=tol)
     @test tr(r3) ≈ one(ComplexF64) atol=tol
     @test sum(abs2.(r3.data .- r3.data')) ≈ 0.0 atol=tol
     @test sum(abs2.(r3.data .- r.data')) ≈ 0.0 atol=tol
@@ -46,19 +46,19 @@ using IterativeSolvers
     =#
 
     # Dense
-    r5 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), :gmres!; tol=tol)
+    r5 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), gmres!; tol=tol)
     @test tr(r5) ≈ one(ComplexF64) atol=tol
     @test sum(abs2.(r5.data .- r5.data')) ≈ 0.0 atol=tol
     @test sum(abs2.(r5.data .- r.data')) ≈ 0.0 atol=tol
 
     # Dense
-    r6 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), :idrs!; s=4, tol=tol)
+    r6 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), idrs!; s=4, tol=tol)
     @test tr(r6) ≈ one(ComplexF64) atol=tol
     @test sum(abs2.(r6.data .- r6.data')) ≈ 0.0 atol=tol
     @test sum(abs2.(r6.data .- r.data')) ≈ 0.0 atol=tol
 
     # Sparse
-    r7 = steadystate_iterative!(deepcopy(r0), H, J, :idrs!; s=4, tol=tol)
+    r7 = steadystate_iterative!(deepcopy(r0), H, J, idrs!; s=4, tol=tol)
     @test tr(r7) ≈ one(ComplexF64) atol=tol
     @test sum(abs2.(r7.data .- r7.data')) ≈ 0.0 atol=tol
     @test sum(abs2.(r7.data .- r.data')) ≈ 0.0 atol=tol

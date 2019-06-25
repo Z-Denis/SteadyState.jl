@@ -16,7 +16,7 @@ See also: [`steadystate_bicg!`](@ref)
 function steadystate_bicg(H::O, J::Vector{O}, l::Int=2; log::Bool=false, kwargs...) where {B<:Basis,O<:AbstractOperator{B,B}}
     ρ0 = O<:DenseOperator ? DenseOperator(H.basis_l) : SparseOperator(H.basis_l)
     ρ0.data[1,1] = ComplexF64(1.0)
-    return steadystate_iterative!(ρ0,H,J,:bicgstabl!,l;log=log,kwargs...)
+    return steadystate_iterative!(ρ0,H,J,bicgstabl!,l;log=log,kwargs...)
 end
 
 """
@@ -34,5 +34,4 @@ operators by solving `L rho = 0` via the stabilized biconjugate gradient method.
 
 See also: [`steadystate_bicg`](@ref)
 """
-steadystate_bicg!(ρ0::DenseOperator{B,B}, H::DenseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:DenseOperator{B,B}} = steadystate_iterative!(ρ0,H,J,:bicgstabl!,l;log=log,kwargs...)
-steadystate_bicg!(ρ0::SparseOperator{B,B}, H::SparseOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:SparseOperator{B,B}} = steadystate_iterative!(ρ0,H,J,:bicgstabl!,l;log=log,kwargs...)
+steadystate_bicg!(ρ0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector{O}, l::Int=2; log::Bool=false, kwargs...) where {B<:Basis,O<:AbstractOperator{B,B}} = steadystate_iterative!(ρ0,H,J,bicgstabl!,l;log=log,kwargs...)
