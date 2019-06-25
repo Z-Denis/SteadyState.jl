@@ -14,7 +14,7 @@ operators by solving `L rho = 0` via an iterative method provided as argument.
 
 See also: [`steadystate_bicg`](@ref)
 """
-function steadystate_iterative!(ρ0::DenseOperator{B,B}, H::DenseOperator{B,B}, J::Vector{O}, solver::Symbol, args...; log::Bool=false, tol::Float64 = sqrt(eps(real(ComplexF64))), kwargs...) where {B<:Basis,O<:DenseOperator{B,B}}
+function steadystate_iterative!(ρ0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector{O}, solver::Symbol, args...; log::Bool=false, tol::Float64 = sqrt(eps(Float64)), kwargs...) where {B<:Basis,O<:AbstractOperator{B,B}}
     method! = isdefined(Main,solver) ? getfield(Main,solver) : getfield(@__MODULE__,solver)
     jump_ops = map(x->x.data, J)
     ρ0_mat = ρ0.data
@@ -23,8 +23,8 @@ function steadystate_iterative!(ρ0::DenseOperator{B,B}, H::DenseOperator{B,B}, 
     M = size(H.data,1)
     # Non-Hermitian Hamiltonian
     iHnh = -im*H.data
-    for Jᵢ=jump_ops
-        iHnh .+= -0.5adjoint(Jᵢ)*Jᵢ
+    for Ji=jump_ops
+        iHnh .+= -0.5Ji'Ji
     end
     Jρ_cache = similar(iHnh)
 
@@ -60,7 +60,8 @@ function steadystate_iterative!(ρ0::DenseOperator{B,B}, H::DenseOperator{B,B}, 
 
     # Perform the stabilized biconjugate gradient procedure and devectorize ρ
     res0_norm = norm(mvecmul!(similar(y),x0) .- y)
-    tol /= res0_norm + eps(Float64)
+    tol /= res0_norm + eps(real(eltype(H.data)))
+  
     if !log
         ρ0.data .= @views reshape(method!(x0,lm,y,args...;tol=tol,kwargs...)[2:end],(M,M))
         return ρ0
