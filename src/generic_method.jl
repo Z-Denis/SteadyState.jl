@@ -24,7 +24,8 @@ function steadystate_iterative!(ρ0::AbstractOperator{B,B}, H::AbstractOperator{
     end
 end
 
-function steadystate_iterative!(ρ0::AbstractMatrix, H::AbstractMatrix, J::Vector{Tm}, method!::Function, args...; log::Bool=false, tol::Float64 = sqrt(eps(Float64)), kwargs...) where {Tm<:AbstractMatrix}
+function steadystate_iterative!(ρ0::T, H::AbstractMatrix, J::Vector{Tm}, method!::Function, args...;
+                                log::Bool=false, tol::Float64 = sqrt(eps(Float64)), kwargs...) where {T<:AbstractMatrix,Tm<:AbstractMatrix}
     # Size of the Hilbert space
     M = size(H,1)
     # Non-Hermitian Hamiltonian
@@ -39,8 +40,8 @@ function steadystate_iterative!(ρ0::AbstractMatrix, H::AbstractMatrix, J::Vecto
     # of the density matrix so as to enforce a trace one non-trivial solution.
     function mvecmul!(y::AbstractVector, x::AbstractVector)
         y .= zero(eltype(y));
-        ym = @views reshape(y[2:end], M, M)
-        ρ  = @views reshape(x[2:end], M, M)
+        ym = T(@views reshape(y[2:end], M, M))
+        ρ  = T(@views reshape(x[2:end], M, M))
 
         ym .= iHnh * ρ .+ ρ * iHnh'
         for Ji=J
@@ -67,7 +68,6 @@ function steadystate_iterative!(ρ0::AbstractMatrix, H::AbstractMatrix, J::Vecto
     # Perform the stabilized biconjugate gradient procedure and devectorize ρ
     res0_norm = norm(mvecmul!(similar(y),x0) .- y)
     tol /= res0_norm + eps(real(eltype(H)))
-
     if !log
         ρ0 .= @views reshape(method!(x0,lm,y,args...;tol=tol,kwargs...)[2:end],(M,M))
         return ρ0
