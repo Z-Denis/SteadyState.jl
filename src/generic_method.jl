@@ -24,8 +24,8 @@ function steadystate_iterative!(ρ0::AbstractOperator{B,B}, H::AbstractOperator{
     end
 end
 
-function steadystate_iterative!(ρ0::T, H::AbstractMatrix, J::Vector{Tm}, method!::Function, args...;
-                                log::Bool=false, tol::Float64 = sqrt(eps(Float64)), kwargs...) where {T<:AbstractMatrix,Tm<:AbstractMatrix}
+function steadystate_iterative!(ρ0::Tρ, H::TH, J::Vector{TJ}, method!::Function, args...;
+                                log::Bool=false, tol::Float64 = sqrt(eps(Float64)), kwargs...) where {Tρ<:AbstractMatrix,TH<:AbstractMatrix,TJ<:AbstractMatrix}
     # Size of the Hilbert space
     M = size(H,1)
     # Non-Hermitian Hamiltonian
@@ -33,22 +33,28 @@ function steadystate_iterative!(ρ0::T, H::AbstractMatrix, J::Vector{Tm}, method
     for Ji=J
         iHnh .+= -0.5Ji'Ji
     end
-    Jρ_cache = similar(iHnh)
+    Jρ_cache = similar(ρ0)
 
     # In-place update of y = Lx where L and x are respectively the vectorized
     # Liouvillian and the vectorized density matrix. y[1] is set to the trace
     # of the density matrix so as to enforce a trace one non-trivial solution.
     function mvecmul!(y::AbstractVector, x::AbstractVector)
         y .= zero(eltype(y));
-        ym = T(@views reshape(y[2:end], M, M))
-        ρ  = T(@views reshape(x[2:end], M, M))
+        ym = Tρ(@views reshape(y[2:end], M, M))
+        ρ  = Tρ(@views reshape(x[2:end], M, M))
 
-        ym .= iHnh * ρ .+ ρ * iHnh'
+        #println("===========")
+        #println(typeof(iHnh), "\n", typeof(ρ), "\n", typeof(ym), "\n", eltype(J), "\n", typeof(Jρ_cache))
+        #println("-----------")
+        #println(typeof(iHnh'), "\n", typeof(first(J)'))
+        #println("ping")
+        ym .= iHnh * ρ .+ ρ *iHnh'
         for Ji=J
             Jρ_cache = Ji * ρ
             ym .+= Jρ_cache * Ji'
         end
-
+        @views y[2:end] .= reshape(ym, M^2)
+        #println("pong")
         y[1] = tr(ρ)
 
         return y
