@@ -17,6 +17,6 @@ steadystate_bicg!(rho, H, J, l; log=false, kwargs...)
 ```
 Same as the above with an initial condition.
 ```julia
-steadystate_iterative!(rho, H, J, :method!, args...; kwargs...)
+steadystate_iterative!(rho, H, J, method!, args...; kwargs...)
 ```
-Same as the above but accepting any inplace method name in the main scope or defined within [IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl) (e.g. `gmres!`, for dense operators, or `idrs!`, compatible with sparse operators as well). `args` and `kwargs` are passed on to the iterative solver.
+Same as the above but accepting any inplace method (e.g. `gmres!`, for dense operators, or `idrs!`, compatible with sparse operators as well, from [IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl)). `args` and `kwargs` are passed on to the iterative solver.
