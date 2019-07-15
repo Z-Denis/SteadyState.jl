@@ -19,4 +19,7 @@ Same as the above with an initial condition.
 ```julia
 steadystate_iterative!(rho, H, J, method!, args...; kwargs...)
 ```
-Same as the above but accepting any inplace method (e.g. `gmres!`, for dense operators, or `idrs!`, compatible with sparse operators as well, from [IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl)). `args` and `kwargs` are passed on to the iterative solver.
+Same as the above but accepting any quantum operator or array and any inplace method (e.g. `gmres!`, for dense operators, or `idrs!`, compatible with sparse operators as well, from [IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl)). `args` and `kwargs` are passed on to the iterative solver.
+
+#### To do
+Add methods for determining the steady state of Bloch-Redfield master equations.
