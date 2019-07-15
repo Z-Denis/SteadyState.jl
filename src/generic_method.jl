@@ -43,11 +43,6 @@ function steadystate_iterative!(ρ0::Tρ, H::TH, J::Vector{TJ}, method!::Functio
         ym = Tρ(@views reshape(y[2:end], M, M))
         ρ  = Tρ(@views reshape(x[2:end], M, M))
 
-        #println("===========")
-        #println(typeof(iHnh), "\n", typeof(ρ), "\n", typeof(ym), "\n", eltype(J), "\n", typeof(Jρ_cache))
-        #println("-----------")
-        #println(typeof(iHnh'), "\n", typeof(first(J)'))
-        #println("ping")
         ym .= iHnh * ρ .+ ρ *iHnh'
         for Ji=J
             Jρ_cache = Ji * ρ
