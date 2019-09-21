@@ -2,7 +2,7 @@ module SteadyState
 
 using QuantumOptics
 using IterativeSolvers, LinearMaps, LinearAlgebra, SparseArrays
-
+export bicgstabl!
 include("generic_method.jl")
 export steadystate_iterative!
 include("bicgstab.jl")
