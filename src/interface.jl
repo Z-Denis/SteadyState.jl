@@ -5,9 +5,9 @@ Compute the steady state density matrix of a Hamiltonian and a set of jump
 operators by solving `L rho = 0` via an iterative method provided as argument.
 
 # Arguments
-* `rho0`: Initial density operator.
-* `H`: Arbitrary operator specifying the Hamiltonian.
-* `J`: Vector containing all jump operators which can be of any arbitrary operator type.
+* `rho0`: Initial density matrix.
+* `H`: Non-lazy operator or arbitrary matrix specifying the Hamiltonian.
+* `J`: Vector containing all jump operators which can be non-lazy operators types or matrices.
 * `method!::Function`: The iterative method to be used. Defaults to
 `IterativeSolvers.bicgstabl!` or `IterativeSolvers.idrs!` depending on arguments' types.
 * `args...`: Further arguments are passed on to the iterative solver.
@@ -38,8 +38,8 @@ Compute the steady state density matrix of a Hamiltonian and a set of jump
 operators by solving `L rho = 0` via an iterative method provided as argument.
 
 # Arguments
-* `H`: Arbitrary operator specifying the Hamiltonian.
-* `J`: Vector containing all jump operators which can be of any arbitrary operator type.
+* `H`: Non-lazy operator or arbitrary matrix specifying the Hamiltonian.
+* `J`: Vector containing all jump operators which can be non-lazy operators types or matrices.
 * `method!::Function`: The iterative method to be used. Defaults to
 `IterativeSolvers.bicgstabl!` or `IterativeSolvers.idrs!` depending on arguments' types.
 * `args...`: Further arguments are passed on to the iterative solver.
