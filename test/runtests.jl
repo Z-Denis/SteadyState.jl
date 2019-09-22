@@ -4,62 +4,99 @@ using QuantumOptics, SparseArrays
 using IterativeSolvers
 
 @testset "SteadyState.jl" begin
-    b = GenericBasis(15)
-    H = SparseOperator(b,sprand(ComplexF64,b.shape[],b.shape[],0.1))
-    H = H + dagger(H)
-    J = [SparseOperator(b,sprand(ComplexF64,b.shape[],b.shape[],0.1)) for i in 1:3]
+    ωc = 1.2
+    ωa = 0.9
+    g = 1.0
+    γ = 0.5
+    κ = 1.1
 
-    tol = 1e-9
+    T = Float64[0.,1.]
 
-    # Reference
-    r = steadystate.eigenvector(H, J; tol=tol)
 
-    # Dense
-    r1 = steadystate_bicg(DenseOperator(H), DenseOperator.(J), 4; tol=tol)
-    @test tr(r1) ≈ one(ComplexF64) atol=tol
-    @test sum(abs2.(r1.data .- r1.data')) ≈ 0.0 atol=tol
-    @test sum(abs2.(r1.data .- r.data')) ≈ 0.0 atol=tol
+    fockbasis = FockBasis(10)
+    spinbasis = SpinBasis(1//2)
+    basis = tensor(spinbasis, fockbasis)
 
-    #Sparse
-    #=
-    r2 = steadystate_bicg(H, J, 4; tol=tol)
-    @test tr(r2) ≈ one(ComplexF64) atol=tol
-    @test sum(abs2.(r2.data .- r2.data')) ≈ 0.0 atol=tol
-    @test sum(abs2.(r2.data .- r.data')) ≈ 0.0 atol=tol
-    =#
+    sx = sigmax(spinbasis)
+    sy = sigmay(spinbasis)
+    sz = sigmaz(spinbasis)
+    sp = sigmap(spinbasis)
+    sm = sigmam(spinbasis)
 
-    r0 = SparseOperator(b)
-    r0.data[1,1] = one(ComplexF64)
+    Ha = embed(basis, 1, 0.5*ωa*sz)
+    Hc = embed(basis, 2, ωc*number(fockbasis))
+    Hint = sm ⊗ create(fockbasis) + sp ⊗ destroy(fockbasis)
+    H = Ha + Hc + Hint
 
-    # Dense
-    r3 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), bicgstabl!, 2; tol=tol)
-    @test tr(r3) ≈ one(ComplexF64) atol=tol
-    @test sum(abs2.(r3.data .- r3.data')) ≈ 0.0 atol=tol
-    @test sum(abs2.(r3.data .- r.data')) ≈ 0.0 atol=tol
+    Ja_unscaled = embed(basis, 1, sm)
+    Jc_unscaled = embed(basis, 2, destroy(fockbasis))
+    Junscaled = [Ja_unscaled, Jc_unscaled]
 
-    #Sparse
-    #=
-    r4 = steadystate_iterative!(deepcopy(r0), H, J, :bicgstabl!, 2; tol=tol)
-    @test tr(r4) ≈ one(ComplexF64) atol=tol
-    @test sum(abs2.(r4.data .- r4.data')) ≈ 0.0 atol=tol
-    @test sum(abs2.(r4.data .- r.data')) ≈ 0.0 atol=tol
-    =#
+    Ja = embed(basis, 1, sqrt(γ)*sm)
+    Jc = embed(basis, 2, sqrt(κ)*destroy(fockbasis))
+    J = [Ja, Jc]
+    Jlazy = [LazyTensor(basis, 1, sqrt(γ)*sm), Jc]
 
-    # Dense
-    r5 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), gmres!; tol=tol)
-    @test tr(r5) ≈ one(ComplexF64) atol=tol
-    @test sum(abs2.(r5.data .- r5.data')) ≈ 0.0 atol=tol
-    @test sum(abs2.(r5.data .- r.data')) ≈ 0.0 atol=tol
+    Hnh = H - 0.5im*sum([dagger(J[i])*J[i] for i=1:length(J)])
 
-    # Dense
-    r6 = steadystate_iterative!(deepcopy(DenseOperator(r0)), DenseOperator(H), DenseOperator.(J), idrs!; s=4, tol=tol)
-    @test tr(r6) ≈ one(ComplexF64) atol=tol
-    @test sum(abs2.(r6.data .- r6.data')) ≈ 0.0 atol=tol
-    @test sum(abs2.(r6.data .- r.data')) ≈ 0.0 atol=tol
+    Hdense = dense(H)
+    Hlazy = LazySum(Ha, Hc, Hint)
+    Hnh_dense = dense(Hnh)
+    Junscaled_dense = map(dense, Junscaled)
+    Jdense = map(dense, J)
 
-    # Sparse
-    r7 = steadystate_iterative!(deepcopy(r0), H, J, idrs!; s=4, tol=tol)
-    @test tr(r7) ≈ one(ComplexF64) atol=tol
-    @test sum(abs2.(r7.data .- r7.data')) ≈ 0.0 atol=tol
-    @test sum(abs2.(r7.data .- r.data')) ≈ 0.0 atol=tol
+    Ψ₀ = spinup(spinbasis) ⊗ fockstate(fockbasis, 5)
+    ρ₀ = dm(Ψ₀)
+
+    tout, ρt = timeevolution.master([0,100], ρ₀, Hdense, Jdense; reltol=1e-7)
+
+    # Test defaults
+    ρ1 = SteadyState.iterative(ρ₀, Hdense, Jdense; tol=1e-7)
+    @test tracedistance(ρ1, ρt[end]) < 1e-6
+    ρ1_bis = SteadyState.iterative(Hdense, Jdense; tol=1e-7)
+    @test tracedistance(ρ1, ρ1_bis) < 1e-6
+
+    ρ2 = SteadyState.iterative(ρ₀, H, J; tol=1e-7)
+    @test tracedistance(DenseOperator(ρ2), ρt[end]) < 1e-6
+    ρ2_bis = SteadyState.iterative(H, J; tol=1e-7)
+    @test tracedistance(DenseOperator(ρ2), DenseOperator(ρ2_bis)) < 1e-6
+
+    ρ3 = SteadyState.iterative(Ψ₀, Hdense, Jdense; tol=1e-7)
+    @test tracedistance(ρ3, ρt[end]) < 1e-6
+    ρ3_bis = SteadyState.iterative(Hdense, Jdense; tol=1e-7)
+    @test tracedistance(ρ3, ρ3_bis) < 1e-6
+
+    ρ4 = SteadyState.iterative(Ψ₀, H, J; tol=1e-7)
+    @test tracedistance(DenseOperator(ρ4), ρt[end]) < 1e-6
+    ρ4_bis = SteadyState.iterative(H, J; tol=1e-7)
+    @test tracedistance(DenseOperator(ρ4), DenseOperator(ρ4_bis)) < 1e-6
+
+    # Test explicit call to iterative solvers
+    ρ1, ch = SteadyState.iterative(ρ₀, Hdense, Jdense, bicgstabl!, 4; log=true, tol=1e-7)
+    @test ch.isconverged
+    @test tracedistance(ρ1, ρt[end]) < 1e-6
+    ρ1_bis, ch = SteadyState.iterative(Hdense, Jdense, bicgstabl!, 4; log=true, tol=1e-7)
+    @test ch.isconverged
+    @test tracedistance(ρ1, ρ1_bis) < 1e-6
+
+    ρ2, ch = SteadyState.iterative(ρ₀, H, J, idrs!; s=15, log=true, tol=1e-7)
+    @test ch.isconverged
+    @test tracedistance(DenseOperator(ρ2), ρt[end]) < 1e-6
+    ρ2_bis, ch = SteadyState.iterative(H, J, idrs!; s=15, log=true, tol=1e-7)
+    @test ch.isconverged
+    @test tracedistance(DenseOperator(ρ2), DenseOperator(ρ2_bis)) < 1e-6
+
+    ρ3, ch = SteadyState.iterative(Ψ₀, Hdense, Jdense, idrs!; s=15, log=true, tol=1e-7)
+    @test ch.isconverged
+    @test tracedistance(ρ3, ρt[end]) < 1e-6
+    ρ3_bis, ch = SteadyState.iterative(Hdense, Jdense, idrs!; s=15, log=true, tol=1e-7)
+    @test ch.isconverged
+    @test tracedistance(ρ3, ρ3_bis) < 1e-6
+
+    ρ4, ch = SteadyState.iterative(Ψ₀, H, J, idrs!; s=15, log=true, tol=1e-7)
+    @test ch.isconverged
+    @test tracedistance(DenseOperator(ρ4), ρt[end]) < 1e-6
+    ρ4_bis, ch = SteadyState.iterative(H, J, idrs!; s=15, log=true, tol=1e-7)
+    @test ch.isconverged
+    @test tracedistance(DenseOperator(ρ4), DenseOperator(ρ4_bis)) < 1e-6
 end

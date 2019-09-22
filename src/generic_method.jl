@@ -1,31 +1,5 @@
-"""
-    steadystate_iterative!(rho0, H, J, method!, args...; [log=false], kwargs...) -> rho[, log]
 
-Compute the steady state density matrix of a Hamiltonian and a set of jump
-operators by solving `L rho = 0` via an iterative method provided as argument.
-
-# Arguments
-* `rho0`: Initial guess.
-* `H`: dense Hamiltonian.
-* `J`: array of dense jump operators.
-* `method!::Function`: some iterative method.
-* `args...`: further arguments are passed on to the iterative solver.
-* `kwargs...`: further keyword arguments are passed on to the iterative solver.
-
-See also: [`steadystate_bicg`](@ref)
-"""
-function steadystate_iterative!(ρ0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector{O}, method!::Function, args...; log::Bool=false, tol::Float64 = sqrt(eps(Float64)), kwargs...) where {B<:Basis,O<:AbstractOperator{B,B}}
-    if !log
-        steadystate_iterative!(ρ0.data, H.data, map(x->x.data, J), method!, args...; log=log, tol=tol, kwargs...)
-        return ρ0
-    else
-        _, history = steadystate_iterative!(ρ0.data, H.data, map(x->x.data, J), method!, args...; log=log, tol=tol, kwargs...)
-        return ρ0, history
-    end
-end
-
-function steadystate_iterative!(ρ0::Tρ, H::TH, J::Vector{TJ}, method!::Function, args...;
-                                log::Bool=false, tol::Float64 = sqrt(eps(Float64)), kwargs...) where {Tρ<:AbstractMatrix,TH<:AbstractMatrix,TJ<:AbstractMatrix}
+function steadystate_iterative!(ρ0::Tρ, H::TH, J::Vector{TJ}, method!::Function, args...;kwargs...) where {Tρ<:AbstractMatrix,TH<:AbstractMatrix,TJ<:AbstractMatrix}
     # Size of the Hilbert space
     M = size(H,1)
     # Non-Hermitian Hamiltonian
@@ -66,20 +40,21 @@ function steadystate_iterative!(ρ0::Tρ, H::TH, J::Vector{TJ}, method!::Functio
     # Define the linear map lm: ρ ↦ L(ρ)
     lm = LinearMap{eltype(iHnh)}(mvecmul!, length(y)::Int, length(y)::Int; ismutating=true, issymmetric=false, ishermitian=false, isposdef=false)
 
+    log = haskey(kwargs, :log) ? kwargs[:log] : false
+    _kwargs = filter(arg -> arg[1]!=:log, kwargs)
+
     # Perform the stabilized biconjugate gradient procedure and devectorize ρ
-    res0_norm = norm(mvecmul!(similar(y),x0) .- y)
-    tol /= res0_norm + eps(real(eltype(H)))
     if !log
-        ρ0 .= @views reshape(method!(x0,lm,y,args...;tol=tol,kwargs...)[2:end],(M,M))
+        ρ0 .= @views reshape(method!(x0,lm,y,args...;log=log,_kwargs...)[2:end],(M,M))
         return ρ0
     else
-        R, history = method!(x0,lm,y,args...;log=log,tol=tol,kwargs...)
+        R, history = method!(x0,lm,y,args...;log=log,_kwargs...)
         ρ0 .= @views reshape(R[2:end],(M,M))
         return ρ0, history
     end
 end
 
-function steadystate_iterative!(ρ0::Tm, H::Tm, J::Vector{Tm}, method!::Function, args...; log::Bool=false, tol::Float64 = sqrt(eps(Float64)), kwargs...) where {T<:Union{Float64,Float32,ComplexF64,ComplexF32},Tm<:DenseArray{T,2}}
+function steadystate_iterative!(ρ0::Tm, H::Tm, J::Vector{Tm}, method!::Function, args...;kwargs...) where {T<:T_blas,Tm<:DenseMatrix{T}}
     # Size of the Hilbert space
     M = size(H,1)
     # Non-Hermitian Hamiltonian
@@ -120,15 +95,15 @@ function steadystate_iterative!(ρ0::Tm, H::Tm, J::Vector{Tm}, method!::Function
     # Define the linear map lm: ρ ↦ L(ρ)
     lm = LinearMap{eltype(iHnh)}(mvecmul!, length(y)::Int, length(y)::Int; ismutating=true, issymmetric=false, ishermitian=false, isposdef=false)
 
-    # Perform the stabilized biconjugate gradient procedure and devectorize ρ
-    res0_norm = norm(mvecmul!(similar(y),x0) .- y)
-    tol /= res0_norm + eps(real(eltype(H)))
+    log = haskey(kwargs, :log) ? kwargs[:log] : false
+    _kwargs = filter(arg -> arg[1]!=:log, kwargs)
 
+    # Perform the stabilized biconjugate gradient procedure and devectorize ρ
     if !log
-        ρ0 .= @views reshape(method!(x0,lm,y,args...;tol=tol,kwargs...)[2:end],(M,M))
+        ρ0 .= @views reshape(method!(x0,lm,y,args...;log=log,_kwargs...)[2:end],(M,M))
         return ρ0
     else
-        R, history = method!(x0,lm,y,args...;log=log,tol=tol,kwargs...)
+        R, history = method!(x0,lm,y,args...;log=log,_kwargs...)
         ρ0 .= @views reshape(R[2:end],(M,M))
         return ρ0, history
     end
