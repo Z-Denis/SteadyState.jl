@@ -19,7 +19,16 @@ function iterative!(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Ve
     @assert all(typeof(j) <: AbstractOperator{B,B} for j in J) "Jump operators have incompatible bases."
     # TODO: relax this condition
     @assert all(typeof(j)==typeof(first(J)) for j in J) "Jump operators must all be of the same type."
-    iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;kwargs...)
+    sol = iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;kwargs...)
+    if typeof(sol) <: Tuple
+        rho = deepcopy(H)
+        rho.data .= sol[1]
+        return rho, sol[2]
+    else
+        rho = deepcopy(H)
+        rho.data .= sol
+        return rho
+    end
 end
 
 """
@@ -42,8 +51,20 @@ function iterative(H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,
     @assert all(typeof(j) <: AbstractOperator{B,B} for j in J) "Jump operators have incompatible bases."
     # TODO: relax this condition
     @assert all(typeof(j)==typeof(first(J)) for j in J) "Jump operators must all be of the same type."
-    iterative(H.data,map(x->x.data,J),method!,args...;kwargs...)
+    sol = iterative(H.data,map(x->x.data,J),method!,args...;kwargs...)
+    if typeof(sol) <: Tuple
+        rho = deepcopy(H)
+        rho.data .= sol[1]
+        return rho, sol[2]
+    else
+        rho = deepcopy(H)
+        rho.data .= sol
+        return rho
+    end
 end
+
+iterative(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {B<:Basis} = iterative!(copy(rho0),H,J,method!,args...;kwargs...)
+iterative(psi0::Ket{B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {B<:Basis} = iterative!(dm(psi0),H,J,method!,args...;kwargs...)
 
 function iterative!(rho0::AbstractMatrix{T1}, H::AbstractMatrix{T2}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {T1<:Number,T2<:Number}
     if ismissing(method!)
@@ -60,6 +81,7 @@ end
 
 function iterative(H::AbstractMatrix{T}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {T<:Number}
     rho0 = similar(H)
+    rho0 .= zero(T)
     rho0[1,1] = one(T)
     return iterative!(rho0,H,J,method!,args...;kwargs...)
 end
