@@ -15,11 +15,15 @@ operators by solving `L rho = 0` via an iterative method provided as argument.
 
 See also: [`iterative`](@ref)
 """
-function iterative!(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {B<:Basis}
-    @assert all(typeof(j) <: AbstractOperator{B,B} for j in J) "Jump operators have incompatible bases."
-    # TODO: relax this condition
-    @assert all(typeof(j)==typeof(first(J)) for j in J) "Jump operators must all be of the same type."
-    sol = iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;kwargs...)
+function iterative!(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...;
+                    rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}}
+    _check_jump_ops(B,rates,J,Jdagger)
+
+    sol = if isnothing(Jdagger)
+        iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=nothing,kwargs...)
+    else
+        iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=map(x->x.data,Jdagger),kwargs...)
+    end
     if typeof(sol) <: Tuple
         rho = deepcopy(H)
         rho.data .= sol[1]
@@ -47,11 +51,15 @@ operators by solving `L rho = 0` via an iterative method provided as argument.
 
 See also: [`iterative`](@ref)
 """
-function iterative(H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {B<:Basis}
-    @assert all(typeof(j) <: AbstractOperator{B,B} for j in J) "Jump operators have incompatible bases."
-    # TODO: relax this condition
-    @assert all(typeof(j)==typeof(first(J)) for j in J) "Jump operators must all be of the same type."
-    sol = iterative(H.data,map(x->x.data,J),method!,args...;kwargs...)
+function iterative(H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...;
+                   rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}}
+    _check_jump_ops(B,rates,J,Jdagger)
+
+    sol = if isnothing(Jdagger)
+        iterative(H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=nothing,kwargs...)
+    else
+        iterative(H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=map(x->x.data,Jdagger),kwargs...)
+    end
     if typeof(sol) <: Tuple
         rho = deepcopy(H)
         rho.data .= sol[1]
@@ -63,19 +71,22 @@ function iterative(H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,
     end
 end
 
-iterative(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {B<:Basis} = iterative!(copy(rho0),H,J,method!,args...;kwargs...)
-iterative(psi0::Ket{B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {B<:Basis} = iterative!(dm(psi0),H,J,method!,args...;kwargs...)
+iterative(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}} = iterative!(copy(rho0),H,J,method!,args...;kwargs...)
+iterative(psi0::Ket{B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}} = iterative!(dm(psi0),H,J,method!,args...;kwargs...)
 
-function iterative!(rho0::AbstractMatrix{T1}, H::AbstractMatrix{T2}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {T1<:Number,T2<:Number}
+
+function iterative!(rho0::AbstractMatrix{T1}, H::AbstractMatrix{T2}, J::Vector{TJ}, method!::Union{Function,Missing}=missing, args...;
+                   rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {T1<:Number,T2<:Number,TJ<:AbstractMatrix,TJd<:Union{Vector{TJ},Nothing}}
+    _check_jump_ops(rates,J,Jdagger)
     if ismissing(method!)
         if isblascompatible(rho0) && isblascompatible(H) && all(isblascompatible.(J))
-            return steadystate_iterative!(rho0,H,J,bicgstabl!,args...;kwargs...)
+            return steadystate_iterative!(rho0,H,rates,J,Jdagger,bicgstabl!,args...;kwargs...)
         else
-            return steadystate_iterative!(rho0,H,J,idrs!,args...;kwargs...)
+            return steadystate_iterative!(rho0,H,rates,J,Jdagger,idrs!,args...;kwargs...)
         end
     else
         @assert eltype(J) <: AbstractMatrix{T} where {T<:Number} "The jump operators must be matrices of numbers."
-        return steadystate_iterative!(rho0,H,J,method!,args...;kwargs...)
+        return steadystate_iterative!(rho0,H,rates,J,Jdagger,method!,args...;kwargs...)
     end
 end
 
@@ -84,4 +95,35 @@ function iterative(H::AbstractMatrix{T}, J::Vector, method!::Union{Function,Miss
     rho0 .= zero(T)
     rho0[1,1] = one(T)
     return iterative!(rho0,H,J,method!,args...;kwargs...)
+end
+
+function _check_jump_ops(B::DataType, rates::DecayRates, J::Vector, Jdagger::Union{Vector,Nothing})
+    @assert all(typeof(j) <: AbstractOperator{B,B} for j in J) "Jump operators have incompatible bases."
+    if !isnothing(Jdagger)
+        @assert all(typeof(j) <: AbstractOperator{B,B} for j in Jdagger) "Adjoint jump operators have incompatible bases."
+    end
+end
+
+function _check_jump_ops(rates::DecayRates, J::Vector, Jdagger::Union{Vector,Nothing})
+    @assert all(typeof(j) <: AbstractMatrix for j in J) "Jump operators must all be of the same type."
+    if !isnothing(Jdagger)
+        @assert all(typeof(j)==typeof(first(J)) for j in Jdagger) "Adjoint jump operators must all be of the same type."
+    end
+    if !isnothing(rates)
+        if typeof(rates) <: Vector
+            @assert length(rates) == length(J) "The number of rates must match that of jump operators."
+            if !isnothing(Jdagger)
+                @assert length(J) == length(Jdagger) "The number of jump operators must match that of adjoint jump operators."
+            end
+        else # rates <: Matrix
+            @assert size(rates,1) == length(J) "The number of jump operators must be compatible with the rates."
+            if !isnothing(Jdagger)
+                @assert size(rates,2) == length(Jdagger) "The number of adjoint jump operators must be compatible with the rates."
+            end
+        end
+    else # rates = nothing
+        if !isnothing(Jdagger)
+            @assert length(J) == length(Jdagger) "The number of jump operators must match that of adjoint jump operators."
+        end
+    end
 end
