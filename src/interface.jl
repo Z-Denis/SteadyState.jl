@@ -19,7 +19,7 @@ function iterative!(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Ve
                     rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}}
     _check_jump_ops(B,rates,J,Jdagger)
 
-    sol = if isnothing(Jdagger)
+    sol = if Jdagger===nothing
         iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=nothing,kwargs...)
     else
         iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=map(x->x.data,Jdagger),kwargs...)
@@ -55,7 +55,7 @@ function iterative(H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,
                    rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}}
     _check_jump_ops(B,rates,J,Jdagger)
 
-    sol = if isnothing(Jdagger)
+    sol = if Jdagger===nothing
         iterative(H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=nothing,kwargs...)
     else
         iterative(H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=map(x->x.data,Jdagger),kwargs...)
@@ -99,30 +99,30 @@ end
 
 function _check_jump_ops(B::DataType, rates::DecayRates, J::Vector, Jdagger::Union{Vector,Nothing})
     @assert all(typeof(j) <: AbstractOperator{B,B} for j in J) "Jump operators have incompatible bases."
-    if !isnothing(Jdagger)
+    if Jdagger!==nothing
         @assert all(typeof(j) <: AbstractOperator{B,B} for j in Jdagger) "Adjoint jump operators have incompatible bases."
     end
 end
 
 function _check_jump_ops(rates::DecayRates, J::Vector, Jdagger::Union{Vector,Nothing})
     @assert all(typeof(j) <: AbstractMatrix for j in J) "Jump operators must all be of the same type."
-    if !isnothing(Jdagger)
+    if Jdagger!==nothing
         @assert all(typeof(j)==typeof(first(J)) for j in Jdagger) "Adjoint jump operators must all be of the same type."
     end
-    if !isnothing(rates)
+    if rates!==nothing
         if typeof(rates) <: Vector
             @assert length(rates) == length(J) "The number of rates must match that of jump operators."
-            if !isnothing(Jdagger)
+            if Jdagger!==nothing
                 @assert length(J) == length(Jdagger) "The number of jump operators must match that of adjoint jump operators."
             end
         else # rates <: Matrix
             @assert size(rates,1) == length(J) "The number of jump operators must be compatible with the rates."
-            if !isnothing(Jdagger)
+            if Jdagger!==nothing
                 @assert size(rates,2) == length(Jdagger) "The number of adjoint jump operators must be compatible with the rates."
             end
         end
     else # rates = nothing
-        if !isnothing(Jdagger)
+        if Jdagger!==nothing
             @assert length(J) == length(Jdagger) "The number of jump operators must match that of adjoint jump operators."
         end
     end
