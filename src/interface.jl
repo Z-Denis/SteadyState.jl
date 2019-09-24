@@ -8,8 +8,9 @@ operators by solving `L rho = 0` via an iterative method provided as argument.
 * `rho0`: Initial density matrix.
 * `H`: Non-lazy operator or arbitrary matrix specifying the Hamiltonian.
 * `J`: Vector containing all jump operators which can be non-lazy operators types or matrices.
-* `method!::Function`: The iterative method to be used. Defaults to
-`IterativeSolvers.bicgstabl!` or `IterativeSolvers.idrs!` depending on arguments' types.
+* `method!::Function`: The iterative method to be used. Defaults to `IterativeSolvers.bicgstabl!` or `IterativeSolvers.idrs!` depending on arguments' types.
+* `rates=nothing`: Vector or matrix specifying the coefficients (decay rates) for the jump operators. If nothing is specified all rates are assumed to be 1.
+* `Jdagger=dagger.(J)`: Vector containing the hermitian conjugates of the jump operators. If they are not given they are calculated automatically.
 * `args...`: Further arguments are passed on to the iterative solver.
 * `kwargs...`: Further keyword arguments are passed on to the iterative solver.
 
@@ -44,8 +45,9 @@ operators by solving `L rho = 0` via an iterative method provided as argument.
 # Arguments
 * `H`: Non-lazy operator or arbitrary matrix specifying the Hamiltonian.
 * `J`: Vector containing all jump operators which can be non-lazy operators types or matrices.
-* `method!::Function`: The iterative method to be used. Defaults to
-`IterativeSolvers.bicgstabl!` or `IterativeSolvers.idrs!` depending on arguments' types.
+* `method!::Function`: The iterative method to be used. Defaults to `IterativeSolvers.bicgstabl!` or `IterativeSolvers.idrs!` depending on arguments' types.
+* `rates=nothing`: Vector or matrix specifying the coefficients (decay rates) for the jump operators. If nothing is specified all rates are assumed to be 1.
+* `Jdagger=dagger.(J)`: Vector containing the hermitian conjugates of the jump operators. If they are not given they are calculated automatically.
 * `args...`: Further arguments are passed on to the iterative solver.
 * `kwargs...`: Further keyword arguments are passed on to the iterative solver.
 
@@ -95,6 +97,11 @@ function iterative(H::AbstractMatrix{T}, J::Vector, method!::Union{Function,Miss
     rho0 .= zero(T)
     rho0[1,1] = one(T)
     return iterative!(rho0,H,J,method!,args...;kwargs...)
+end
+
+function iterative(rho0::AbstractMatrix{T1}, H::AbstractMatrix{T2}, J::Vector{TJ}, method!::Union{Function,Missing}=missing, args...;
+                   rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {T1<:Number,T2<:Number,TJ<:AbstractMatrix,TJd<:Union{Vector{TJ},Nothing}}
+    return iterative!(copy(rho0),H,J,method!,args...;kwargs...)
 end
 
 function _check_jump_ops(B::DataType, rates::DecayRates, J::Vector, Jdagger::Union{Vector,Nothing})
