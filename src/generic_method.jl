@@ -13,6 +13,7 @@ function steadystate_iterative!(rho0::Trho, H::AbstractMatrix, rates::DecayRates
 
     # Solution x must satisfy L.x = y with y[1] = tr(x) = 1 and y[j≠1] = 0.
     x0 = similar(rho0, M^2+1)
+    x0 .= zero(eltype(rho0))
     x0[1] = zero(x0[1])
     x0[2:end] .= reshape(rho0, M^2)
 
