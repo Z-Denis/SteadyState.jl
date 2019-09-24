@@ -45,7 +45,10 @@ using IterativeSolvers
 
     tout, ρt = timeevolution.master([0,100], ρ₀, Hdense, Jdense; reltol=1e-7)
 
+    #
     # Test defaults
+    #
+
     ρ1 = SteadyState.iterative(ρ₀, Hdense, Jdense; tol=1e-7)
     @test tracedistance(ρ1, ρt[end]) < 1e-6
     ρ1_bis = SteadyState.iterative(Hdense, Jdense; tol=1e-7)
@@ -95,7 +98,10 @@ using IterativeSolvers
     @test ch.isconverged
     @test tracedistance(DenseOperator(ρ4), DenseOperator(ρ4_bis)) < 1e-6
 
+    #
     # Mirror to QuantumOptics.timeevolution.master tests
+    #
+
     ρ = SteadyState.iterative(ρ₀, Hdense, Jdense; tol=1e-7)
 
     ρ2 = SteadyState.iterative(ρ₀, H, J; tol=1e-6)
@@ -142,8 +148,10 @@ using IterativeSolvers
     ρ2 = SteadyState.iterative(ρ₀, Hdense, Jrotated_dense; rates=rates_matrix_rotated, tol=1e-7)
     @test tracedistance(ρ, ρ2) < 1e-5
 
-
+    #
     # Test genericity
+    #
+
     f(O::AbstractOperator) = Complex{BigFloat}.(O.data)
 
     ρ2 = SteadyState.iterative(f(Hdense), f.(Jdense); tol=1e-7)
@@ -169,4 +177,48 @@ using IterativeSolvers
 
     ρ2 = SteadyState.iterative(ρ₀.data, f(H), f.(Junscaled); Jdagger=f.(dagger.(Junscaled)), rates=rates_vector, tol=1e-7)
     @test tracedistance(ρ, DenseOperator(basis,Matrix(ρ2))) < 1e-5
+
+    #
+    # Test residual computation for any possible signature
+    #
+
+    # no BLAS
+    # rates=nothing, Jdagger=nothing
+    ρ2 = SteadyState.iterative(ρ₀, H, J; tol=1e-6)
+    @test tracedistance(ρ, DenseOperator(ρ2)) < 1e-5
+    # rates=Vector, Jdagger=nothing
+    ρ2 = SteadyState.iterative(ρ₀, H, Junscaled; rates=rates_vector, tol=1e-6)
+    @test tracedistance(ρ, DenseOperator(ρ2)) < 1e-5
+    # rates=Matrix, Jdagger=nothing
+    ρ2 = SteadyState.iterative(ρ₀, H, Jrotated; rates=rates_matrix_rotated, tol=1e-6)
+    @test tracedistance(ρ, DenseOperator(ρ2)) < 1e-5
+    # rates=nothing, Jdagger=dagger.(J)
+    ρ2 = SteadyState.iterative(ρ₀, H, J; Jdagger=dagger.(J), tol=1e-6)
+    @test tracedistance(ρ, DenseOperator(ρ2)) < 1e-5
+    # rates=Vector, Jdagger=dagger.(J)
+    ρ2 = SteadyState.iterative(ρ₀, H, Junscaled; Jdagger=dagger.(Junscaled), rates=rates_vector, tol=1e-6)
+    @test tracedistance(ρ, DenseOperator(ρ2)) < 1e-5
+    # rates=Matrix, Jdagger=dagger.(J)
+    ρ2 = SteadyState.iterative(ρ₀, H, Jrotated; Jdagger=dagger.(Jrotated), rates=rates_matrix_rotated, tol=1e-6)
+    @test tracedistance(ρ, DenseOperator(ρ2)) < 1e-5
+
+    # BLAS
+    # rates=nothing, Jdagger=nothing
+    ρ2 = SteadyState.iterative(DenseOperator(ρ₀), Hdense, Jdense; tol=1e-6)
+    @test tracedistance(ρ, ρ2) < 1e-5
+    # rates=Vector, Jdagger=nothing
+    ρ2 = SteadyState.iterative(DenseOperator(ρ₀), Hdense, Junscaled_dense; rates=rates_vector, tol=1e-6)
+    @test tracedistance(ρ, ρ2) < 1e-5
+    # rates=Matrix, Jdagger=nothing
+    ρ2 = SteadyState.iterative(DenseOperator(ρ₀), Hdense, Jrotated_dense; rates=rates_matrix_rotated, tol=1e-6)
+    @test tracedistance(ρ, ρ2) < 1e-5
+    # rates=nothing, Jdagger=dagger.(J)
+    ρ2 = SteadyState.iterative(DenseOperator(ρ₀), Hdense, Jdense; Jdagger=dagger.(Jdense), tol=1e-6)
+    @test tracedistance(ρ, ρ2) < 1e-5
+    # rates=Vector, Jdagger=dagger.(J)
+    ρ2 = SteadyState.iterative(DenseOperator(ρ₀), Hdense, Junscaled_dense; Jdagger=dagger.(Junscaled_dense), rates=rates_vector, tol=1e-6)
+    @test tracedistance(ρ, ρ2) < 1e-5
+    # rates=Matrix, Jdagger=dagger.(J)
+    ρ2 = SteadyState.iterative(DenseOperator(ρ₀), Hdense, Jrotated_dense; Jdagger=dagger.(Jrotated_dense), rates=rates_matrix_rotated, tol=1e-6)
+    @test tracedistance(ρ, ρ2) < 1e-5
 end
