@@ -105,7 +105,7 @@ using IterativeSolvers
     ρ = SteadyState.iterative(ρ₀, Hdense, Jdense; tol=1e-7)
 
     ρ2 = SteadyState.iterative(ρ₀, H, J; tol=1e-6)
-    @test tracedistance(ρ, DenseOperator(ρ1)) < 1e-5
+    @test tracedistance(ρ, DenseOperator(ρ2)) < 1e-5
 
     ρ2 = SteadyState.iterative(Ψ₀, Hdense, Jdense; tol=1e-6)
     @test tracedistance(ρ, ρ2) < 1e-5

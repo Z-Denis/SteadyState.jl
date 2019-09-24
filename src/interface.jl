@@ -73,8 +73,8 @@ function iterative(H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,
     end
 end
 
-iterative(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}} = iterative!(copy(rho0),H,J,method!,args...;kwargs...)
-iterative(psi0::Ket{B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}} = iterative!(dm(psi0),H,J,method!,args...;kwargs...)
+iterative(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}} = iterative!(copy(rho0),H,J,method!,args...;rates=rates,Jdagger=Jdagger,kwargs...)
+iterative(psi0::Ket{B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Function,Missing}=missing, args...; rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {B<:Basis,TJd<:Union{Vector,Nothing}} = iterative!(dm(psi0),H,J,method!,args...;rates=rates,Jdagger=Jdagger,kwargs...)
 
 
 function iterative!(rho0::AbstractMatrix{T1}, H::AbstractMatrix{T2}, J::Vector{TJ}, method!::Union{Function,Missing}=missing, args...;
@@ -92,16 +92,16 @@ function iterative!(rho0::AbstractMatrix{T1}, H::AbstractMatrix{T2}, J::Vector{T
     end
 end
 
-function iterative(H::AbstractMatrix{T}, J::Vector, method!::Union{Function,Missing}=missing, args...; kwargs...) where {T<:Number}
+function iterative(H::AbstractMatrix{T}, J::Vector, method!::Union{Function,Missing}=missing, args...; rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {T<:Number,TJd<:Union{Vector,Nothing}}
     rho0 = similar(H)
     rho0 .= zero(T)
     rho0[1,1] = one(T)
-    return iterative!(rho0,H,J,method!,args...;kwargs...)
+    return iterative!(rho0,H,J,method!,args...;rates=rates,Jdagger=Jdagger,kwargs...)
 end
 
 function iterative(rho0::AbstractMatrix{T1}, H::AbstractMatrix{T2}, J::Vector{TJ}, method!::Union{Function,Missing}=missing, args...;
                    rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {T1<:Number,T2<:Number,TJ<:AbstractMatrix,TJd<:Union{Vector{TJ},Nothing}}
-    return iterative!(copy(rho0),H,J,method!,args...;kwargs...)
+    return iterative!(copy(rho0),H,J,method!,args...;rates=rates,Jdagger=Jdagger,kwargs...)
 end
 
 function _check_jump_ops(B::DataType, rates::DecayRates, J::Vector, Jdagger::Union{Vector,Nothing})
