@@ -9,7 +9,7 @@ function steadystate_iterative!(rho0::Trho, H::AbstractMatrix, rates::DecayRates
     # In-place update of y = Lx where L and x are respectively the vectorized
     # Liouvillian and the vectorized density matrix. y[1] is set to the trace
     # of the density matrix so as to enforce a trace one non-trivial solution.
-    mvecmul!(y::AbstractVector, x::AbstractVector) = residual!(y,x,iHnh,nothing,J,nothing,Jrho_cache)
+    mvecmul!(y::AbstractVector, x::AbstractVector) = residual!(y,x,iHnh,rates,J,Jdagger,Jrho_cache)
 
     # Solution x must satisfy L.x = y with y[1] = tr(x) = 1 and y[j≠1] = 0.
     x0 = similar(rho0, M^2+1)
@@ -108,7 +108,7 @@ function residual!(y::AbstractVector, x::AbstractVector, iHnh::Tm, rates::Vector
     BLAS.gemm!('N', 'N', one(eltype(y)), iHnh, rho, one(eltype(y)), drho)
     BLAS.gemm!('N', 'C', one(eltype(y)), rho, iHnh, one(eltype(y)), drho)
     for i=1:length(J)
-        BLAS.gemm!('N','N', rates[i], J[i], rho, zero(eltype(y)), Jrho_cache)
+        BLAS.gemm!('N','N', eltype(y)(rates[i]), J[i], rho, zero(eltype(y)), Jrho_cache)
         BLAS.gemm!('N','N', one(eltype(y)), Jrho_cache, Jdagger[i], one(eltype(y)), drho)
     end
 
@@ -126,13 +126,13 @@ function residual!(y::AbstractVector, x::AbstractVector, iHnh::Tm, rates::Matrix
     BLAS.gemm!('N', 'N', one(eltype(y)), iHnh, rho, one(eltype(y)), drho)
     BLAS.gemm!('N', 'C', one(eltype(y)), rho, iHnh, one(eltype(y)), drho)
     for i=1:length(J), j=1:length(J)
-        BLAS.gemm!('N','N', rates[i,j], J[i], rho, zero(eltype(y)), Jrho_cache)
+        BLAS.gemm!('N','N', eltype(y)(rates[i,j]), J[i], rho, zero(eltype(y)), Jrho_cache)
         BLAS.gemm!('N','N', one(eltype(y)), Jrho_cache, Jdagger[j], one(eltype(y)), drho)
 
         BLAS.gemm!('N','N', -0.5one(eltype(y)), Jdagger[j], Jrho_cache, one(eltype(y)), drho)
 
 
-        BLAS.gemm!('N','N', rates[i,j], rho, Jdagger[j], zero(eltype(y)), Jrho_cache)
+        BLAS.gemm!('N','N', eltype(y)(rates[i,j]), rho, Jdagger[j], zero(eltype(y)), Jrho_cache)
         BLAS.gemm!('N','N', -0.5one(eltype(y)), Jrho_cache, J[i], one(eltype(y)), drho)
     end
 
@@ -169,7 +169,7 @@ function residual!(y::AbstractVector, x::AbstractVector, iHnh::Tm, rates::Vector
     BLAS.gemm!('N', 'N', one(eltype(y)), iHnh, rho, one(eltype(y)), drho)
     BLAS.gemm!('N', 'C', one(eltype(y)), rho, iHnh, one(eltype(y)), drho)
     for i=1:length(J)
-        BLAS.gemm!('N','N', rates[i], J[i], rho, zero(eltype(y)), Jrho_cache)
+        BLAS.gemm!('N','N', eltype(y)(rates[i]), J[i], rho, zero(eltype(y)), Jrho_cache)
         BLAS.gemm!('N','C', one(eltype(y)), Jrho_cache, J[i], one(eltype(y)), drho)
     end
 
@@ -187,13 +187,13 @@ function residual!(y::AbstractVector, x::AbstractVector, iHnh::Tm, rates::Matrix
     BLAS.gemm!('N', 'N', one(eltype(y)), iHnh, rho, one(eltype(y)), drho)
     BLAS.gemm!('N', 'C', one(eltype(y)), rho, iHnh, one(eltype(y)), drho)
     for i=1:length(J), j=1:length(J)
-        BLAS.gemm!('N','N', rates[i,j], J[i], rho, zero(eltype(y)), Jrho_cache)
+        BLAS.gemm!('N','N', eltype(y)(rates[i,j]), J[i], rho, zero(eltype(y)), Jrho_cache)
         BLAS.gemm!('N','C', one(eltype(y)), Jrho_cache, J[j], one(eltype(y)), drho)
 
         BLAS.gemm!('C','N', -0.5one(eltype(y)), J[j], Jrho_cache, one(eltype(y)), drho)
 
 
-        BLAS.gemm!('N','C', rates[i,j], rho, J[j], zero(eltype(y)), Jrho_cache)
+        BLAS.gemm!('N','C', eltype(y)(rates[i,j]), rho, J[j], zero(eltype(y)), Jrho_cache)
         BLAS.gemm!('N','N', -0.5one(eltype(y)), Jrho_cache, J[i], one(eltype(y)), drho)
     end
 
