@@ -23,7 +23,8 @@ function iterative!(rho0::AbstractOperator{B,B}, H::AbstractOperator{B,B}, J::Ve
     sol = if Jdagger===nothing
         iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=nothing,kwargs...)
     else
-        iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=map(x->x.data,Jdagger),kwargs...)
+        T = typeof(first(J).data)
+        iterative!(rho0.data,H.data,map(x->x.data,J),method!,args...;rates=rates,Jdagger=map(x->T(x.data),Jdagger),kwargs...)
     end
     if typeof(sol) <: Tuple
         rho = deepcopy(H)
@@ -78,7 +79,7 @@ iterative(psi0::Ket{B}, H::AbstractOperator{B,B}, J::Vector, method!::Union{Func
 
 
 function iterative!(rho0::AbstractMatrix{T1}, H::AbstractMatrix{T2}, J::Vector{TJ}, method!::Union{Function,Missing}=missing, args...;
-                   rates::DecayRates=nothing, Jdagger::TJd=nothing, kwargs...) where {T1<:Number,T2<:Number,TJ<:AbstractMatrix,TJd<:Union{Vector{TJ},Nothing}}
+                   rates::DecayRates=nothing, Jdagger::VJd=nothing, kwargs...) where {T1<:Number,T2<:Number,TJ<:AbstractMatrix,TJd<:AbstractMatrix,VJd<:Union{Vector{TJd},Nothing}}
     _check_jump_ops(rates,J,Jdagger)
     if ismissing(method!)
         if isblascompatible(rho0) && isblascompatible(H) && all(isblascompatible.(J))
