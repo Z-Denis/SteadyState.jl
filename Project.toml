@@ -7,14 +7,15 @@ version = "0.1.0"
 IterativeSolvers = "42fd0dbc-a981-5370-80f2-aaf504508153"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
-QuantumOptics = "6e0679c1-51ea-5a7c-ac74-d61b76210b0c"
+QuantumOpticsBase = "4f57444f-1401-5e15-980d-4471b28d5678"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [compat]
 julia = "1"
 
 [extras]
+QuantumOptics = "6e0679c1-51ea-5a7c-ac74-d61b76210b0c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["Test", "QuantumOptics"]
