@@ -5,6 +5,9 @@
 
 Tiny package for determining iteratively the steady state of time-independent Liouville superoperators thanks to [QuantumOptics.jl](https://github.com/qojulia/QuantumOptics.jl) and [IterativeSolvers.jl](https://github.com/JuliaMath/IterativeSolvers.jl).
 
+#### Important
+The code was integrated into [QuantumOptics.jl](https://github.com/qojulia/QuantumOptics.jl/blob/master/src/steadystate_iterative.jl) and may be accessed directly via its [IPA](https://docs.qojulia.org/api/#QuantumOptics.steadystate.iterative).
+
 #### Methods
 
 ```julia
